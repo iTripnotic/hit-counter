@@ -1,4 +1,4 @@
-package net.runelite.client.plugins.hitcounter;
+package com.hitcounter;
 
 import com.google.inject.Provides;
 import lombok.Getter;
@@ -15,8 +15,6 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.util.HotkeyListener;
-import net.runelite.client.plugins.hitcounter.HitCounterConfig.DisplayMode;
-import net.runelite.client.plugins.hitcounter.HitCounterConfig.AudioTriggerMode;
 
 import javax.inject.Inject;
 import java.awt.image.BufferedImage;
@@ -27,19 +25,19 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+//TODO
+// 1. Make sure you can't duplicate infobox
+// 2. Test what happens when local player dies
+// 3. Find better sound trigger
+
 @PluginDescriptor(
         name = "Hit Counter",
         description = "Tracks the number of hits performed.",
         tags = {"combat", "pvm", "boss", "hit", "infobox", "monster", "overlay", "attack", "damage", "track"},
         enabledByDefault = false
 )
-
-//TODO
-// 1. Make sure you can't duplicate infobox
-// 2. Test what happens when local player dies
-// 3. Find better sound trigger
-
-public class HitCounterPlugin extends Plugin {
+public class HitCounterPlugin extends Plugin
+{
 
     @Inject
     private Client client;
@@ -107,7 +105,7 @@ public class HitCounterPlugin extends Plugin {
         overlayManager.add(flashOverlay);
         keyManager.registerKeyListener(resetCounterHotkey);
 
-        if (config.displayMode() == DisplayMode.INFOBOX)
+        if (config.displayMode() == HitCounterConfig.DisplayMode.INFOBOX)
         {
             BufferedImage image = spriteManager.getSprite(RED_HITSPLAT, 0);
             if (image != null)
@@ -143,7 +141,7 @@ public class HitCounterPlugin extends Plugin {
 
     private void removeInfoboxIfActive()
     {
-        if (config.displayMode() == DisplayMode.INFOBOX && infoBox != null)
+        if (config.displayMode() == HitCounterConfig.DisplayMode.INFOBOX && infoBox != null)
         {
             infoBoxManager.removeInfoBox(infoBox);
             infoBox = null;
@@ -216,11 +214,11 @@ public class HitCounterPlugin extends Plugin {
         lastAttackTime = Instant.now();
 
         int triggerCount = config.triggerHitCount();
-        AudioTriggerMode mode = config.triggerMode();
+        HitCounterConfig.AudioTriggerMode mode = config.triggerMode();
 
         boolean shouldTrigger = triggerCount > 0 &&
-                ((mode == AudioTriggerMode.EXACT && attackCount == triggerCount) ||
-                        (mode == AudioTriggerMode.EVERY && attackCount % triggerCount == 0));
+                ((mode == HitCounterConfig.AudioTriggerMode.EXACT && attackCount == triggerCount) ||
+                        (mode == HitCounterConfig.AudioTriggerMode.EVERY && attackCount % triggerCount == 0));
 
         if (shouldTrigger)
         {
@@ -284,7 +282,7 @@ public class HitCounterPlugin extends Plugin {
     @Subscribe
     public void onGameTick(GameTick tick)
     {
-        if (config.displayMode() != DisplayMode.INFOBOX)
+        if (config.displayMode() != HitCounterConfig.DisplayMode.INFOBOX)
         {
             return;
         }

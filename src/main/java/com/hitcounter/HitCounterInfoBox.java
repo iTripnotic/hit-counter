@@ -1,9 +1,8 @@
-package net.runelite.client.plugins.hitcounter;
+package com.hitcounter;
 
 import net.runelite.api.NPC;
 import net.runelite.client.ui.overlay.infobox.InfoBox;
 import net.runelite.client.ui.overlay.infobox.InfoBoxPriority;
-import net.runelite.client.plugins.hitcounter.HitCounterConfig.TriggerEffectMode;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -32,7 +31,7 @@ public class HitCounterInfoBox extends InfoBox {
     {
         int count = plugin.getAttackCount();
 
-        if (config.triggerEffectMode() == TriggerEffectMode.HIGHLIGHT &&
+        if (config.triggerEffectMode() == HitCounterConfig.TriggerEffectMode.HIGHLIGHT &&
                 config.triggerHitCount() > 0 &&
                 count == config.triggerHitCount())
         {

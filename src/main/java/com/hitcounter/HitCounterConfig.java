@@ -1,4 +1,4 @@
-package net.runelite.client.plugins.hitcounter;
+package com.hitcounter;
 
 import net.runelite.client.config.*;
 

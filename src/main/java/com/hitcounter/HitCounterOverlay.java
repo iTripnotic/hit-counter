@@ -1,11 +1,9 @@
-package net.runelite.client.plugins.hitcounter;
+package com.hitcounter;
 
-import net.runelite.client.plugins.hitcounter.HitCounterConfig.DisplayMode;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
-import net.runelite.client.plugins.hitcounter.HitCounterConfig.TriggerEffectMode;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -34,7 +32,7 @@ public class HitCounterOverlay extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        if (config.displayMode() != DisplayMode.OVERLAY)
+        if (config.displayMode() != HitCounterConfig.DisplayMode.OVERLAY)
         {
             /**
              * Exit early if display mode is not set to overlay
@@ -55,7 +53,7 @@ public class HitCounterOverlay extends OverlayPanel
         int attackCount = plugin.getAttackCount();
 
         Color numberColor = config.defaultColor();
-        if (config.triggerEffectMode() == TriggerEffectMode.HIGHLIGHT &&
+        if (config.triggerEffectMode() == HitCounterConfig.TriggerEffectMode.HIGHLIGHT &&
                 config.triggerHitCount() > 0 &&
                 attackCount == config.triggerHitCount())
         {
