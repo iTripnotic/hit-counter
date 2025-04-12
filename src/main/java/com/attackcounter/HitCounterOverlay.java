@@ -1,11 +1,11 @@
-package net.runelite.client.plugins.attackcounter;
+package net.runelite.client.plugins.hitcounter;
 
-import net.runelite.client.plugins.attackcounter.AttackCounterConfig.DisplayMode;
+import net.runelite.client.plugins.hitcounter.HitCounterConfig.DisplayMode;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
-import net.runelite.client.plugins.attackcounter.AttackCounterConfig.TriggerEffectMode;
+import net.runelite.client.plugins.hitcounter.HitCounterConfig.TriggerEffectMode;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -14,14 +14,15 @@ import java.awt.*;
 import static net.runelite.api.MenuAction.RUNELITE_OVERLAY;
 
 @Singleton
-public class AttackCounterOverlay extends OverlayPanel
+public class HitCounterOverlay extends OverlayPanel
 {
+    private final HitCounterPlugin plugin;
+    private final HitCounterConfig config;
 
-    private final AttackCounterPlugin plugin;
-    private final AttackCounterConfig config;
+    private static final Dimension PANEL_SIZE = new Dimension(130, 0);
 
     @Inject
-    public AttackCounterOverlay(AttackCounterPlugin plugin, AttackCounterConfig config)
+    public HitCounterOverlay(HitCounterPlugin plugin, HitCounterConfig config)
     {
         super(plugin);
         setPosition(OverlayPosition.ABOVE_CHATBOX_RIGHT);
@@ -30,23 +31,26 @@ public class AttackCounterOverlay extends OverlayPanel
         addMenuEntry(RUNELITE_OVERLAY, "Reset", "Hit counter", e -> plugin.resetCounter());
     }
 
-    //TODO
-    // 5. BUG - Duplicate infoboxes
-
     @Override
     public Dimension render(Graphics2D graphics)
     {
         if (config.displayMode() != DisplayMode.OVERLAY)
         {
+            /**
+             * Exit early if display mode is not set to overlay
+             */
             return null;
         }
 
         if (config.displayOnlyOnUpdate() && plugin.isOutOfCombat())
         {
+            /**
+             * Only show if user is in combat
+             */
             return null;
         }
 
-        panelComponent.setPreferredSize(new Dimension(130, 0));
+        panelComponent.setPreferredSize(PANEL_SIZE);
 
         int attackCount = plugin.getAttackCount();
 
@@ -63,5 +67,4 @@ public class AttackCounterOverlay extends OverlayPanel
 
         return super.render(graphics);
     }
-
 }

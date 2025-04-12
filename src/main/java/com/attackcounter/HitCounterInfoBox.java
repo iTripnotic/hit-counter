@@ -1,19 +1,20 @@
-package net.runelite.client.plugins.attackcounter;
+package net.runelite.client.plugins.hitcounter;
 
 import net.runelite.api.NPC;
 import net.runelite.client.ui.overlay.infobox.InfoBox;
 import net.runelite.client.ui.overlay.infobox.InfoBoxPriority;
-import net.runelite.client.plugins.attackcounter.AttackCounterConfig.TriggerEffectMode;
+import net.runelite.client.plugins.hitcounter.HitCounterConfig.TriggerEffectMode;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-public class AttackCounterInfoBox extends InfoBox {
+public class HitCounterInfoBox extends InfoBox {
 
-    private final AttackCounterPlugin plugin;
-    private final AttackCounterConfig config;
+    private final HitCounterPlugin plugin;
+    private final HitCounterConfig config;
 
-    public AttackCounterInfoBox(BufferedImage image, AttackCounterPlugin plugin, AttackCounterConfig config) {
+    public HitCounterInfoBox(BufferedImage image, HitCounterPlugin plugin, HitCounterConfig config)
+    {
         super(image, plugin);
         this.plugin = plugin;
         this.config = config;
@@ -35,10 +36,10 @@ public class AttackCounterInfoBox extends InfoBox {
                 config.triggerHitCount() > 0 &&
                 count == config.triggerHitCount())
         {
-            return config.triggerColor(); // Highlight color
+            return config.triggerColor();
         }
 
-        return config.defaultColor(); // Fallback/default color
+        return config.defaultColor();
     }
 
     @Override

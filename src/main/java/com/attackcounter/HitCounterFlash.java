@@ -1,4 +1,4 @@
-package net.runelite.client.plugins.attackcounter;
+package net.runelite.client.plugins.hitcounter;
 
 import net.runelite.api.Client;
 import net.runelite.client.ui.overlay.Overlay;
@@ -6,41 +6,42 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.awt.*;
 import java.time.Duration;
 import java.time.Instant;
 
-public class ScreenFlashOverlay extends Overlay
+public class HitCounterFlash extends Overlay
 {
-    private static final int DEFAULT_FLASH_ALPHA = 80;
+    @Nullable
+    private Color flashColor = null;
 
     private final Client client;
-    private final AttackCounterPlugin plugin;
-
-    private Color flashColor;
     private Instant flashStart;
     private int durationTicks;
 
+    private static final int DEFAULT_FLASH_ALPHA = 80;
+
+    private static final long TICK_DURATION_MS = 600L;
+
     @Inject
-    public ScreenFlashOverlay(Client client, AttackCounterPlugin plugin)
+    public HitCounterFlash(Client client)
     {
         this.client = client;
-        this.plugin = plugin;
-
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ALWAYS_ON_TOP);
         setPriority(OverlayPriority.HIGH);
     }
 
-    public void triggerFlash(Color color, int durationTicks)
+    public void trigger(Color color, int durationTicks)
     {
         this.flashColor = color;
         this.durationTicks = durationTicks;
         this.flashStart = Instant.now();
     }
 
-    public void clearFlash()
+    public void clear()
     {
         this.flashStart = null;
         this.flashColor = null;
@@ -55,15 +56,13 @@ public class ScreenFlashOverlay extends Overlay
             return null;
         }
 
-        // Calculate elapsed ticks (1 tick = 600ms)
         long elapsed = Duration.between(flashStart, Instant.now()).toMillis();
-        if (elapsed > durationTicks * 600L)
+        if (elapsed > durationTicks * TICK_DURATION_MS)
         {
-            clearFlash();
+            clear();
             return null;
         }
 
-        // Flash effect: blink every 20 game cycles
         int cycle = client.getGameCycle();
         boolean shouldRender = cycle % 40 >= 20;
 
@@ -72,7 +71,6 @@ public class ScreenFlashOverlay extends Overlay
             return null;
         }
 
-        // Render the semi-transparent screen
         final int width = client.getCanvas().getWidth();
         final int height = client.getCanvas().getHeight();
 

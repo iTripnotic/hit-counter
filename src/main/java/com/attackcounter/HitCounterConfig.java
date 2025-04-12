@@ -1,12 +1,11 @@
-package net.runelite.client.plugins.attackcounter;
+package net.runelite.client.plugins.hitcounter;
 
 import net.runelite.client.config.*;
-import net.runelite.client.ui.FontManager;
 
 import java.awt.*;
 
 @ConfigGroup("attackcounter")
-public interface AttackCounterConfig extends Config {
+public interface HitCounterConfig extends Config {
 
     @ConfigSection(
             name = "Reset Options",
@@ -36,7 +35,11 @@ public interface AttackCounterConfig extends Config {
     )
     String keybindSection = "keybindSection";
 
-    // Reset Options
+    /**
+     * ======================
+     *       Reset Options
+     * ======================
+     */
     @ConfigItem(
             keyName = "resetOnNpcDespawn",
             name = "Reset on Kill",
@@ -71,8 +74,11 @@ public interface AttackCounterConfig extends Config {
         return 10; // Default reset threshold
     }
 
-
-    // Display Options
+    /**
+     * ======================
+     *       Display Options
+     * ======================
+     */
     @ConfigItem(
             keyName = "displayMode",
             name = "Display Mode",
@@ -120,8 +126,11 @@ public interface AttackCounterConfig extends Config {
         return "";
     }
 
-
-    // Trigger Options
+    /**
+     * ======================
+     *       Trigger Options
+     * ======================
+     */
     @ConfigItem(
             keyName = "triggerHitCount",
             name = "Trigger Hit Count",
@@ -172,7 +181,7 @@ public interface AttackCounterConfig extends Config {
 
     @ConfigItem(
             keyName = "defaultColor",
-            name = "Default Counter Color",
+            name = "Counter Color",
             description = "Color of the text when trigger condition is not met.",
             position = 4,
             section = hitTriggerSection
@@ -182,7 +191,11 @@ public interface AttackCounterConfig extends Config {
         return Color.WHITE;
     }
 
-    // Keybind Options
+    /**
+     * ======================
+     *       Keybind Options
+     * ======================
+     */
     @ConfigItem(
             keyName = "resetCounterKey",
             name = "Reset Counter Key",
@@ -194,6 +207,9 @@ public interface AttackCounterConfig extends Config {
         return Keybind.NOT_SET;
     }
 
+    /**
+     * Trigger
+     */
     enum TriggerEffectMode
     {
         NONE,
@@ -212,7 +228,7 @@ public interface AttackCounterConfig extends Config {
     }
 
     /**
-     * Audio
+     * Mode
      */
     enum AudioTriggerMode
     {

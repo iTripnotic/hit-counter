@@ -1,4 +1,4 @@
-package net.runelite.client.plugins.attackcounter;
+package net.runelite.client.plugins.hitcounter;
 
 import com.google.inject.Provides;
 import lombok.Getter;
@@ -15,9 +15,8 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.util.HotkeyListener;
-import net.runelite.client.plugins.attackcounter.AttackCounterConfig.DisplayMode;
-import net.runelite.client.plugins.attackcounter.AttackCounterConfig.AudioTriggerMode;
-
+import net.runelite.client.plugins.hitcounter.HitCounterConfig.DisplayMode;
+import net.runelite.client.plugins.hitcounter.HitCounterConfig.AudioTriggerMode;
 
 import javax.inject.Inject;
 import java.awt.image.BufferedImage;
@@ -30,20 +29,26 @@ import java.util.stream.Collectors;
 
 @PluginDescriptor(
         name = "Hit Counter",
-        description = "Tracks the number of attacks performed.",
-        tags = {"combat", "attack", "counter", "damage", "hit", "track"},
+        description = "Tracks the number of hits performed.",
+        tags = {"combat", "pvm", "boss", "hit", "infobox", "monster", "overlay", "attack", "damage", "track"},
         enabledByDefault = false
 )
 
-public class AttackCounterPlugin extends Plugin {
+//TODO
+// 1. Make sure you can't duplicate infobox
+// 2. Test what happens when local player dies
+// 3. Find better sound trigger
+
+public class HitCounterPlugin extends Plugin {
+
     @Inject
     private Client client;
 
     @Inject
-    private AttackCounterConfig config;
+    private HitCounterConfig config;
 
     @Inject
-    private AttackCounterOverlay overlay;
+    private HitCounterOverlay overlay;
 
     @Inject
     private OverlayManager overlayManager;
@@ -54,15 +59,12 @@ public class AttackCounterPlugin extends Plugin {
     @Getter
     private NPC lastInteractedNpc;
 
-    @Getter
-    private int attackCount = 0;
-
     private Instant lastAttackTime;
 
     @Inject
     private InfoBoxManager infoBoxManager;
 
-    private AttackCounterInfoBox infoBox;
+    private HitCounterInfoBox infoBox;
 
     @Inject
     private SpriteManager spriteManager;
@@ -71,13 +73,20 @@ public class AttackCounterPlugin extends Plugin {
     private ClientThread clientThread;
 
     @Inject
-    private ScreenFlashOverlay flashOverlay;
+    private HitCounterFlash flashOverlay;
 
-    private static final int RED_HITSPLAT_SPRITE_ID = 1359;
+    @Getter
+    private int attackCount = 0;
+
+    private static final int RED_HITSPLAT = 1359;
+
+    private static final int FLASH_DURATION_TICKS = 2;
+
+    private static final int OUT_OF_COMBAT_TICKS = 6;
 
     @Provides
-    AttackCounterConfig provideConfig(ConfigManager configManager) {
-        return configManager.getConfig(AttackCounterConfig.class);
+    HitCounterConfig provideConfig(ConfigManager configManager) {
+        return configManager.getConfig(HitCounterConfig.class);
     }
 
     private final HotkeyListener resetCounterHotkey = new HotkeyListener(() -> config.resetCounterKey()) {
@@ -90,7 +99,6 @@ public class AttackCounterPlugin extends Plugin {
     @Override
     protected void startUp() throws Exception
     {
-
         attackCount = 0;
         lastInteractedNpc = null;
         lastAttackTime = null;
@@ -101,10 +109,10 @@ public class AttackCounterPlugin extends Plugin {
 
         if (config.displayMode() == DisplayMode.INFOBOX)
         {
-            BufferedImage image = spriteManager.getSprite(RED_HITSPLAT_SPRITE_ID, 0);
+            BufferedImage image = spriteManager.getSprite(RED_HITSPLAT, 0);
             if (image != null)
             {
-                infoBox = new AttackCounterInfoBox(image, this, config);
+                infoBox = new HitCounterInfoBox(image, this, config);
                 infoBoxManager.addInfoBox(infoBox);
             }
         }
@@ -121,14 +129,10 @@ public class AttackCounterPlugin extends Plugin {
         overlayManager.remove(flashOverlay);
         keyManager.unregisterKeyListener(resetCounterHotkey);
 
-        forceRemoveInfobox();
+        removeInfobox();
     }
 
-    /**
-     * Removes the infobox regardless of the current display mode.
-     * Used during plugin shutdown or when switching away from infobox display.
-     */
-    private void forceRemoveInfobox()
+    private void removeInfobox()
     {
         if (infoBox != null)
         {
@@ -137,12 +141,6 @@ public class AttackCounterPlugin extends Plugin {
         }
     }
 
-    /**
-     * Removes the infobox only if it's currently active
-     * and the display mode is set to INFOBOX.
-     * Used in logic where the plugin is still running but the counter is no longer relevant,
-     * such as on NPC death or when out of combat.
-     */
     private void removeInfoboxIfActive()
     {
         if (config.displayMode() == DisplayMode.INFOBOX && infoBox != null)
@@ -171,10 +169,10 @@ public class AttackCounterPlugin extends Plugin {
                     {
                         clientThread.invokeLater(() ->
                         {
-                            BufferedImage image = spriteManager.getSprite(RED_HITSPLAT_SPRITE_ID, 0);
+                            BufferedImage image = spriteManager.getSprite(RED_HITSPLAT, 0);
                             if (image != null)
                             {
-                                infoBox = new AttackCounterInfoBox(image, this, config);
+                                infoBox = new HitCounterInfoBox(image, this, config);
                                 infoBoxManager.addInfoBox(infoBox);
                             }
                         });
@@ -184,7 +182,7 @@ public class AttackCounterPlugin extends Plugin {
 
                 case OVERLAY:
                 default:
-                    forceRemoveInfobox();
+                    removeInfobox();
                     overlayManager.add(overlay);
                     break;
             }
@@ -197,29 +195,25 @@ public class AttackCounterPlugin extends Plugin {
         Actor actor = event.getActor();
         Hitsplat hitsplat = event.getHitsplat();
 
-        // Check if the target is an NPC and the hitsplat is from the local player
         if (!(actor instanceof NPC) || !hitsplat.isMine()) {
             return;
         }
 
         NPC npc = (NPC) actor;
-
-        // Check if the NPC is in the excluded list
         Set<String> excludedNames = getIgnoredNpcNames(config.excludedNpcNames());
         if (excludedNames.contains(Objects.requireNonNull(npc.getName()).toLowerCase()))
         {
             return;
         }
 
-        // If config enabled, only count successful hits
         if (config.onlyCountSuccessfulHits() && hitsplat.getAmount() <= 0)
         {
             return;
         }
 
-        attackCount++;  // Increment attack count
-        lastInteractedNpc = npc; // Track the NPC
-        lastAttackTime = Instant.now(); // Track the last time player hit
+        attackCount++;
+        lastInteractedNpc = npc;
+        lastAttackTime = Instant.now();
 
         int triggerCount = config.triggerHitCount();
         AudioTriggerMode mode = config.triggerMode();
@@ -237,19 +231,18 @@ public class AttackCounterPlugin extends Plugin {
                     break;
 
                 case HIGHLIGHT:
-                    // No action needed here, color will apply automatically in render method.
+                    // Color will apply in render method
                     break;
 
                 case FLASH:
                     if (flashOverlay != null)
                     {
-                        flashOverlay.triggerFlash(config.triggerColor(), 2); // 2 ticks
+                        flashOverlay.trigger(config.triggerColor(), FLASH_DURATION_TICKS);
                     }
                     break;
             }
         }
 
-        // Reset logic for "reset after X hits"
         if (config.resetAfterXHits() && attackCount >= config.resetHitCount())
         {
             resetCounter();
@@ -267,7 +260,7 @@ public class AttackCounterPlugin extends Plugin {
 
             if (config.resetOnNpcDespawn())
             {
-                resetCounter(); // Only reset if config allows
+                resetCounter();
             }
             removeInfoboxIfActive();
         }
@@ -285,6 +278,9 @@ public class AttackCounterPlugin extends Plugin {
 
     }
 
+    /**
+     * Ensures the InfoBox visibility dynamically updates based on combat state.
+     */
     @Subscribe
     public void onGameTick(GameTick tick)
     {
@@ -302,10 +298,10 @@ public class AttackCounterPlugin extends Plugin {
         }
         else if (shouldBeVisible && infoBox == null)
         {
-            BufferedImage image = spriteManager.getSprite(RED_HITSPLAT_SPRITE_ID, 0);
+            BufferedImage image = spriteManager.getSprite(RED_HITSPLAT, 0);
             if (image != null)
             {
-                infoBox = new AttackCounterInfoBox(image, this, config);
+                infoBox = new HitCounterInfoBox(image, this, config);
                 infoBoxManager.addInfoBox(infoBox);
             }
         }
@@ -320,9 +316,6 @@ public class AttackCounterPlugin extends Plugin {
     /**
      * Parses a comma-separated list of NPC names from the config,
      * trims and lowercases them for case-insensitive comparison.
-     *
-     * @param names The raw string of comma-separated NPC names from config
-     * @return A Set of lowercased NPC names to ignore
      */
     private Set<String> getIgnoredNpcNames(String names)
     {
@@ -354,7 +347,6 @@ public class AttackCounterPlugin extends Plugin {
             return true;
         }
 
-        return Instant.now().isAfter(lastAttackTime.plusSeconds(6));
+        return Instant.now().isAfter(lastAttackTime.plusSeconds(OUT_OF_COMBAT_TICKS));
     }
-
 }

@@ -1,6 +1,10 @@
 plugins {
 	id 'java'
+	id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
+
+group = 'com.attackcounter'
+version = '1.0'
 
 repositories {
 	mavenLocal()
@@ -13,49 +17,42 @@ repositories {
 	mavenCentral()
 }
 
-def runeLiteVersion = 'latest.release'
+def runeLiteVersion = '1.11.6.1'
 
 dependencies {
-	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
-
+	compileOnly "net.runelite:client:$runeLiteVersion"
 	compileOnly 'org.projectlombok:lombok:1.18.30'
 	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
-	testImplementation 'junit:junit:4.12'
-	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
-	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
+	testImplementation "junit:junit:4.13.2"
 }
 
-group = 'com.example'
-version = '1.0-SNAPSHOT'
+java {
+	toolchain {
+		languageVersion.set(JavaLanguageVersion.of(11))
+	}
+}
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
-	options.release.set(11)
 }
 
-tasks.register('shadowJar', Jar) {
-	dependsOn configurations.testRuntimeClasspath
+tasks.withType(Test).configureEach {
+	enabled = false
+}
+
+tasks.withType(JavaCompile).configureEach {
+	if (name == "compileTestJava") {
+		enabled = false
+	}
+}
+
+shadowJar {
+	archiveClassifier.set('all')
+	archiveBaseName.set('hit-counter')
 	manifest {
-		attributes('Main-Class': 'com.example.ExamplePluginTest', 'Multi-Release': true)
+		attributes 'Main-Class': 'net.runelite.client.RuneLite'
 	}
-
-	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-	from sourceSets.main.output
-	from sourceSets.test.output
-	from {
-		configurations.testRuntimeClasspath.collect { file ->
-			file.isDirectory() ? file : zipTree(file)
-		}
-	}
-
-	exclude 'META-INF/INDEX.LIST'
-	exclude 'META-INF/*.SF'
-	exclude 'META-INF/*.DSA'
-	exclude 'META-INF/*.RSA'
-	exclude '**/module-info.class'
-
-	group = BasePlugin.BUILD_GROUP
-	archiveClassifier.set('shadow')
-	archiveFileName.set("${rootProject.name}-${project.version}-all.jar")
+	mergeServiceFiles()
+	exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
 }
